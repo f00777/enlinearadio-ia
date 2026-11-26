@@ -310,6 +310,175 @@ export default function RadioMonitorWizard() {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadPdf = async () => {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+    let y = 20;
+
+    const nowStr = new Intl.DateTimeFormat("es-CL", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "America/Santiago",
+    }).format(new Date());
+
+    // Header
+    doc.setFont("courier", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 98, 92);
+    doc.text("UNIDAD DE CONTROL DE PAUTA · MÓDULO 03", margin, y);
+    y += 6;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(22, 22, 21);
+    doc.text("EnLínea Radio — Certificación Publicitaria", margin, y);
+    y += 6;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(74, 73, 68);
+    doc.text("Dashboard de Menciones Publicitarias y Certificación", margin, y);
+    y += 5;
+
+    doc.setFont("courier", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 98, 92);
+    doc.text(`Fecha de emisión: ${nowStr}`, margin, y);
+    y += 5;
+
+    doc.setDrawColor(216, 214, 206);
+    doc.setLineWidth(0.4);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    // KPI Summary Box
+    const boxHeight = 22;
+    doc.setFillColor(250, 249, 246);
+    doc.setDrawColor(216, 214, 206);
+    doc.rect(margin, y, contentWidth, boxHeight, "FD");
+
+    const colWidth = contentWidth / 3;
+
+    // Col 1: Total Menciones
+    doc.setFont("courier", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(110, 108, 101);
+    doc.text("TOTAL MENCIONES DETECTADAS", margin + 4, y + 7);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(22, 22, 21);
+    doc.text(String(auspiciadores.length), margin + 4, y + 16);
+
+    // Col 2: Marcas Únicas
+    doc.line(margin + colWidth, y, margin + colWidth, y + boxHeight);
+    doc.setFont("courier", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(110, 108, 101);
+    doc.text("MARCAS / AUSPICIADORES ÚNICOS", margin + colWidth + 4, y + 7);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(22, 22, 21);
+    doc.text(String(uniqueBrandsCount), margin + colWidth + 4, y + 16);
+
+    // Col 3: Estado General
+    doc.line(margin + colWidth * 2, y, margin + colWidth * 2, y + boxHeight);
+    doc.setFont("courier", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(110, 108, 101);
+    doc.text("ESTADO GENERAL", margin + colWidth * 2 + 4, y + 7);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(21, 115, 71);
+    doc.text("Certificado por IA", margin + colWidth * 2 + 4, y + 16);
+
+    y += boxHeight + 10;
+
+    // Section title
+    doc.setFont("courier", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(22, 22, 21);
+    doc.text(
+      `ACTA DE MENCIONES CERTIFICADAS (${auspiciadores.length})`,
+      margin,
+      y
+    );
+    y += 6;
+
+    if (auspiciadores.length === 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(90, 88, 82);
+      doc.text(
+        "No se detectaron menciones comerciales en esta transmisión.",
+        margin,
+        y + 4
+      );
+    } else {
+      auspiciadores.forEach((item, index) => {
+        const cleanTs = item.timestamp.replace(/[\[\]]/g, "").trim() || "00:00";
+        const quoteLines = doc.splitTextToSize(
+          `"${item.cita}"`,
+          contentWidth - 10
+        );
+        const cardHeight = 16 + quoteLines.length * 5;
+
+        if (y + cardHeight > pageHeight - 20) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setDrawColor(216, 214, 206);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margin, y, contentWidth, cardHeight, "FD");
+
+        // Top row: [MM:SS] Marca — Tipo | Certificado
+        doc.setFont("courier", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(22, 22, 21);
+        doc.text(`[${cleanTs}]`, margin + 4, y + 7);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text(`${index + 1}. ${item.marca}`, margin + 22, y + 7);
+
+        doc.setFont("courier", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(90, 88, 82);
+        doc.text(`(${item.tipo})`, margin + 22, y + 12);
+
+        doc.setFont("courier", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(21, 115, 71);
+        doc.text(
+          "CERTIFICADO",
+          pageWidth - margin - 4,
+          y + 7,
+          { align: "right" }
+        );
+
+        // Quote
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9.5);
+        doc.setTextColor(51, 50, 46);
+        doc.text(quoteLines, margin + 6, y + 17);
+
+        y += cardHeight + 4;
+      });
+    }
+
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    doc.save(`certificado-pauta-${stamp}.pdf`);
+  };
+
   // Step 2 -> Step 3: Detect Sponsors
   const handleProceedToSponsorDetection = async () => {
     setStep(3);
@@ -857,7 +1026,7 @@ export default function RadioMonitorWizard() {
         {/* STEP 3: DASHBOARD DE MENCIONES PUBLICITARIAS Y CERTIFICACIÓN */}
         {step === 3 && (
           <section className="border border-[#D8D6CE] bg-white">
-            <div className="border-b border-[#E6E4DC] px-6 py-4 flex items-center justify-between bg-[#FAF9F6]">
+            <div className="border-b border-[#E6E4DC] px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#FAF9F6]">
               <div>
                 <span className="font-mono text-[11px] uppercase tracking-widest text-[#6E6C65]">
                   Módulo 03 · Auditoría de Pauta (openai/gpt-oss-120b)
@@ -867,10 +1036,20 @@ export default function RadioMonitorWizard() {
                 </h2>
               </div>
               {!isDetecting && !detectError && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-[#157347] bg-[#EBF5EE] text-[#157347] font-mono text-xs font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Certificado por IA
-                </span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    className="px-3.5 py-1.5 border border-[#161615] bg-white text-[#161615] text-xs font-mono uppercase tracking-wider hover:bg-[#161615] hover:text-[#F6F5F1] transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Descargar PDF
+                  </button>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#157347] bg-[#EBF5EE] text-[#157347] font-mono text-xs font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Certificado por IA
+                  </span>
+                </div>
               )}
             </div>
 

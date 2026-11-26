@@ -140,6 +140,7 @@ Toda la interfaz del wizard reside en el componente cliente `RadioMonitorWizard`
 - **Transición (`Siguiente`):** Ejecuta `handleProceedToSponsorDetection()`, enviando `{ transcript: formattedText, pautaMessage }` a `POST /api/detect-sponsors`.
 
 #### Módulo 03 · Dashboard de Menciones Publicitarias y Certificación (`step === 3`)
+- **Botón `Descargar PDF` (`handleDownloadPdf`):** Genera y descarga en el navegador (`jspdf`) un certificado en formato `.pdf` (`certificado-pauta-YYYY-MM-DD-HH-mm-ss.pdf`) sin logos externos, con exactamente los mismos datos mostrados en pantalla (encabezado, fecha/hora, las 3 tarjetas KPI y el acta detallada de menciones certificadas con sus citas textuales).
 - **3 Tarjetas KPI:**
   1. *Total Menciones Detectadas* (`auspiciadores.length`)
   2. *Marcas / Auspiciadores Únicos* (`uniqueBrandsCount`)
